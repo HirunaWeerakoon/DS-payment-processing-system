@@ -1,3 +1,4 @@
+from time_sync import sync_clock, now 
 # server/server.py
 import os
 import sys
@@ -42,7 +43,7 @@ def pay():
         receiver = data['receiver'],
         amount   = data['amount']
     )
-    payment['timestamp'] = time.time()   # Member 3 replaces this with now()
+    payment['timestamp'] = now()  
     payment['server']    = SERVER_ID
     payment['status']    = 'success'
 
@@ -70,4 +71,5 @@ if __name__ == '__main__':
     init_db()
     print(f'[Server {SERVER_ID}] Starting on port {SELF_PORT}, Raft on {RAFT_PORT}')
     print(f'[Server {SERVER_ID}] Raft peers: {peer_list}')
+    sync_clock()
     app.run(port=SELF_PORT, debug=False)
