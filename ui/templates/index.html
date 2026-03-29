@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment System Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 18px; font-weight: 600; letter-spacing: .3px; }
+    header span { font-size: 12px; color: #8888aa; }
+
+    /* ── Layout ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; display: grid; gap: 24px; }
+
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 22px 26px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    }
+    .card h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #666;
+      margin-bottom: 18px;
+    }
+
+    /* ── Server status panel ── */
+    .server-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .server-box {
+      border: 1.5px solid #e8e8f0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: border-color .3s;
+    }
+    .server-box.up   { border-color: #22c55e; background: #f0fdf4; }
+    .server-box.down { border-color: #ef4444; background: #fef2f2; }
+    .dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      transition: background .3s;
+    }
+    .dot.up   { background: #22c55e; box-shadow: 0 0 0 4px #bbf7d0; }
+    .dot.down { background: #ef4444; box-shadow: 0 0 0 4px #fecaca; }
+    .server-info .name  { font-weight: 600; font-size: 15px; }
+    .server-info .state { font-size: 12px; margin-top: 2px; }
+    .server-info .state.up   { color: #16a34a; }
+    .server-info .state.down { color: #dc2626; }
+    .last-updated { font-size: 11px; color: #aaa; margin-top: 14px; text-align: right; }
+
+    /* ── Payment form ── */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 140px auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 9px 13px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-group input:focus { border-color: #6366f1; }
+    .btn-pay {
+      padding: 10px 22px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      white-space: nowrap;
+    }
+    .btn-pay:hover   { background: #4f46e5; }
+    .btn-pay:active  { transform: scale(.97); }
+    .btn-pay:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* ── Toast notification ── */
+    #toast {
+      margin-top: 14px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    #toast.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    #toast.error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+    /* ── Transaction table ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      text-align: left;
+      padding: 10px 14px;
+      background: #f8f8fc;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #888;
+      border-bottom: 1.5px solid #ebebf5;
+    }
+    tbody tr { border-bottom: 1px solid #f0f0f5; transition: background .15s; }
+    tbody tr:hover { background: #fafafe; }
+    tbody td { padding: 10px 14px; color: #333; }
+    .id-cell  { font-family: monospace; font-size: 11px; color: #888; }
+    .amount-cell { font-weight: 600; color: #1a1a2e; }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .badge.success { background: #dcfce7; color: #166534; }
+    .badge.failed  { background: #fee2e2; color: #991b1b; }
+    .badge.pending { background: #fef9c3; color: #854d0e; }
+    .server-badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+    .empty-msg {
+      text-align: center;
+      color: #aaa;
+      padding: 40px 0;
+      font-size: 14px;
+    }
+    .refresh-note { font-size: 11px; color: #aaa; margin-top: 12px; text-align: right; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Distributed Payment System</h1>
+  <span>Dashboard &mdash; auto-refreshes every 3s</span>
+</header>
+
+<main>
+
+  <!-- ── Server Status ── -->
+  <div class="card">
+    <h2>Server Status</h2>
+    <div class="server-grid" id="server-grid">
+      <div class="server-box" id="box-A">
+        <div class="dot" id="dot-A"></div>
+        <div class="server-info">
+          <div class="name">Server A</div>
+          <div class="state" id="state-A">Checking...</div>
+        </div>
+      </div>
+      <div class="server-box" id="box-B">
+        <div class="dot" id="dot-B"></div>
+        <div class="server-info">
+          <div class="name">Server B</div>
+          <div class="state" id="state-B">Checking...</div>
+        </div>
+      </div>
+      <div class="server-box" id="box-C">
+        <div class="dot" id="dot-C"></div>
+        <div class="server-info">
+          <div class="name">Server C</div>
+          <div class="state" id="state-C">Checking...</div>
+        </div>
+      </div>
+    </div>
+    <div class="last-updated" id="status-updated"></div>
+  </div>
+
+  <!-- ── Payment Form ── -->
+  <div class="card">
+    <h2>Send Payment</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="sender">Sender</label>
+        <input id="sender" type="text" placeholder="e.g. alice" />
+      </div>
+      <div class="form-group">
+        <label for="receiver">Receiver</label>
+        <input id="receiver" type="text" placeholder="e.g. bob" />
+      </div>
+      <div class="form-group">
+        <label for="amount">Amount (£)</label>
+        <input id="amount" type="number" placeholder="0.00" min="0.01" step="0.01" />
+      </div>
+      <button class="btn-pay" id="pay-btn" onclick="sendPayment()">Send</button>
+    </div>
+    <div id="toast"></div>
+  </div>
+
+  <!-- ── Transaction History ── -->
+  <div class="card">
+    <h2>Transaction History</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Payment ID</th>
+            <th>Sender</th>
+            <th>Receiver</th>
+            <th>Amount</th>
+            <th>Timestamp</th>
+            <th>Status</th>
+            <th>Server</th>
+          </tr>
+        </thead>
+        <tbody id="payments-body">
+          <tr><td colspan="7" class="empty-msg">Loading payments...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="refresh-note" id="payments-updated"></div>
+  </div>
+
+</main>
+
+<script>
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  function formatTime(ts) {
+    if (!ts || ts === 0) return '—';
+    const d = new Date(ts * 1000);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = type;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 4000);
+  }
+
+  // ── Server Status ─────────────────────────────────────────────────────────
+
+  async function refreshStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+
+      for (const [id, state] of Object.entries(data)) {
+        const isUp = state === 'UP';
+        const box   = document.getElementById(`box-${id}`);
+        const dot   = document.getElementById(`dot-${id}`);
+        const label = document.getElementById(`state-${id}`);
+        if (!box) continue;
+
+        box.className   = `server-box ${isUp ? 'up' : 'down'}`;
+        dot.className   = `dot ${isUp ? 'up' : 'down'}`;
+        label.className = `state ${isUp ? 'up' : 'down'}`;
+        label.textContent = isUp ? 'Online' : 'Offline';
+      }
+
+      document.getElementById('status-updated').textContent =
+        'Last checked: ' + new Date().toLocaleTimeString();
+
+    } catch (e) {
+      console.error('Status fetch failed:', e);
+    }
+  }
+
+  // ── Payments Table ────────────────────────────────────────────────────────
+
+  async function refreshPayments() {
+    try {
+      const res  = await fetch('/api/payments');
+      const data = await res.json();
+      const tbody = document.getElementById('payments-body');
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No payments yet</td></tr>';
+        return;
+      }
+
+      // Sort newest first
+      data.sort((a, b) => b.timestamp - a.timestamp);
+
+      tbody.innerHTML = data.map(p => `
+        <tr>
+          <td class="id-cell">${p.id ? p.id.substring(0, 8) + '...' : '—'}</td>
+          <td>${p.sender || '—'}</td>
+          <td>${p.receiver || '—'}</td>
+          <td class="amount-cell">£${parseFloat(p.amount || 0).toFixed(2)}</td>
+          <td>${formatTime(p.timestamp)}</td>
+          <td><span class="badge ${p.status || 'pending'}">${p.status || 'pending'}</span></td>
+          <td><span class="server-badge">${p.server || '—'}</span></td>
+        </tr>
+      `).join('');
+
+      document.getElementById('payments-updated').textContent =
+        'Last refreshed: ' + new Date().toLocaleTimeString() +
+        ' — ' + data.length + ' transaction' + (data.length !== 1 ? 's' : '');
+
+    } catch (e) {
+      console.error('Payments fetch failed:', e);
+    }
+  }
+
+  // ── Send Payment ──────────────────────────────────────────────────────────
+
+  async function sendPayment() {
+    const sender   = document.getElementById('sender').value.trim();
+    const receiver = document.getElementById('receiver').value.trim();
+    const amount   = document.getElementById('amount').value.trim();
+    const btn      = document.getElementById('pay-btn');
+
+    if (!sender || !receiver || !amount) {
+      showToast('Please fill in all fields.', 'error');
+      return;
+    }
+    if (sender === receiver) {
+      showToast('Sender and receiver cannot be the same.', 'error');
+      return;
+    }
+    if (parseFloat(amount) <= 0) {
+      showToast('Amount must be greater than 0.', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+      const res = await fetch('/api/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender, receiver, amount: parseFloat(amount) })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.status === 'success') {
+        showToast(`Payment sent! ID: ${data.id.substring(0, 8)}... via Server ${data.server}`, 'success');
+        document.getElementById('sender').value   = '';
+        document.getElementById('receiver').value = '';
+        document.getElementById('amount').value   = '';
+        refreshPayments();
+      } else {
+        showToast(`Payment failed: ${data.reason || 'Unknown error'}`, 'error');
+      }
+    } catch (e) {
+      showToast('Could not reach any server. Are all servers running?', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send';
+    }
+  }
+
+  // ── Allow Enter key to submit form ───────────────────────────────────────
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendPayment();
+  });
+
+  // ── Auto-refresh every 3 seconds ─────────────────────────────────────────
+
+  refreshStatus();
+  refreshPayments();
+  setInterval(refreshStatus,  3000);
+  setInterval(refreshPayments, 3000);
+</script>
+
+</body>
+</html>
