@@ -14,3 +14,26 @@ def fresh_db(monkeypatch):
     init_db()
     yield
     conn.close()
+
+def make_payment(sender='alice', receiver='bob', amount=10.0):
+    return {
+        'id': str(uuid.uuid4()),
+        'sender': sender,
+        'receiver': receiver,
+        'amount': float(amount),
+        'timestamp': time.time(),
+        'status': 'success',
+        'server': 'A',
+    }
+
+def test_record_payment_stores_correctly():
+    p = make_payment('alice', 'bob', 50.0)
+    record_payment(p)
+    all_p = get_all_payments()
+    assert len(all_p) == 1
+    assert all_p[0]['sender'] == 'alice'
+
+def test_payment_exists_returns_true():
+    p = make_payment()
+    record_payment(p)
+    assert payment_exists(p['id']) is True
