@@ -37,3 +37,18 @@ def test_payment_exists_returns_true():
     p = make_payment()
     record_payment(p)
     assert payment_exists(p['id']) is True
+
+def test_deduplication_insert_or_ignore():
+    """Inserting the same payment twice does not create a duplicate."""
+    p = make_payment()
+    record_payment(p)
+    record_payment(p) # This second call should be ignored by the DB
+    all_p = get_all_payments()
+    assert len(all_p) == 1
+
+def test_payments_ordered_by_timestamp_desc():
+    p1 = make_payment(); p1['timestamp'] = 1000.0
+    p2 = make_payment(); p2['timestamp'] = 2000.0
+    for p in [p1, p2]: record_payment(p)
+    all_p = get_all_payments()
+    assert all_p[0]['timestamp'] == 2000.0
